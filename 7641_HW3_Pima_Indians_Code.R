@@ -7,6 +7,7 @@ library(ClusterR)
 library(fastICA)
 library(cluster)
 library(mclust)
+library(ggthemes)
 
 #loading pima indians data
 pima <- read.csv('pima-indians-diabetes.csv', header = F)
@@ -42,7 +43,7 @@ pima_scaled <- scale(pima)
 set.seed(191)
 
 #calculating within sum of squares for different number of clusters
-fviz_nbclust(pima_scaled, kmeans, nstart = 25, method = 'wss') +
+fviz_nbclust(pima_scaled, kmeans, nstart = 20, method = 'silhouette') +
 labs(subtitle = 'Pima Indians Data')
 
 #final kmeans clustering with 20 clusters
@@ -57,5 +58,29 @@ table(pima_kclusters[,9:10])
 
 #expectation maximization --------------------------------------
 
+#em model
 pima_em <- Mclust(pima_scaled)
+
+#plotting to determine number of clusters
+plot(pima_em, what = 'BIC', main = TRUE)
+title(main = 'BIC and Clusters for Pima Indian Data')
+#optimal clusters using VII = 9 then 8.
+
+#PCA  ----------------------------------------------------------
+#pca model
+pima_pca <- prcomp(pima_scaled)
+
+#scree plot
+fviz_eig(pima_pca, addlabels = TRUE, ggtheme = theme_hc(), linecolor = "red", main = "Scree plot of Pima Indians PCA model")
+#6 components = 90% of variance
+
+
+
+
+
+
+
+
+
+
 

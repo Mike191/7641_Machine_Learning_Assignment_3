@@ -20,6 +20,10 @@ income_data[income_data == "?"] <- NA
 income_data <- income_data %>%
   select(-education, -native.country)
 
+#cutting down the data 
+train_index <- createDataPartition(income_data$income, p = .5, list = FALSE, times = 1)
+income_data <- income_data[train_index,]
+
 #making the y variable a factor
 income_data$income <- as.character(income_data$income)  #converting factor to characters
 income_data$income <- ifelse(income_data$income == ">50K", "greater50K", "less50K") 
@@ -45,19 +49,29 @@ rm(income_y)  #no longer needed
 #setting the seed
 set.seed(191)
 
-#calculating within sum of squares for different number of clusters
-fviz_nbclust(income_data, kmeans, method = 'wss') +
+#using silhouette method to determine optimal number of clusters
+fviz_nbclust(income_data, kmeans, method = 'silhouette', nstart = 20) +
   labs(subtitle = 'Census Income Data')
 
-#calculating within sum of squares for different number of clusters
-wss <- sapply(1:k_max, 
-              function(k){kmeans(income_data[,1:50], k, nstart=50, algorithm = 'Lloyd')$tot.withinss})
 
-#plotting kmeans - elbow plot
-plot(1:k_max, wss, type = 'b', pch = 19, col= 'blue',
-     ylab = "Total within cluster sum of squares",
-     xlab = 'Number of clusters',
-     main = "Eblow diagram for Adult Income Kmeans")
+#final kmeans clustering with 8 clusters
+income_kmeans <- kmeans(income_data, 8, algorithm = 'Lloyd', nstart = 20)
 
-#final kmeans clustering with 20 clusters
-pima_kmeans <- kmeans(pima_clust, 20, algorithm = 'Lloyd', nstart = 50)
+
+#expectation maximization --------------------------------------
+
+#em model
+income_em <- Mclust(income_data)
+
+#plotting to determine number of clusters
+plot(income_em, what = 'BIC', main = TRUE, dimens = '30')
+title(main = 'BIC and Clusters for Census Income Data')
+#optimal clusters using VII = 9
+
+#PCA  ----------------------------------------------------------
+#pca model
+income_pca <- prcomp(income_data)
+
+#scree plot
+fviz_eig(income_pca, addlabels = TRUE, ggtheme = theme_hc(), ncp = 30, linecolor = "red", main = "Scree plot of Census Income PCA model")
+#28 components = 80% of variance
