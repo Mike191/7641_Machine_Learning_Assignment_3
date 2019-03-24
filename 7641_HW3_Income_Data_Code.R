@@ -49,7 +49,7 @@ rm(income_y)  #no longer needed
 #setting the seed
 set.seed(191)
 
-#using silhouette method to determine optimal number of clusters
+#using wss method to determine optimal number of clusters
 fviz_nbclust(income_data, kmeans, method = 'wss', nstart = 20) +
   labs(subtitle = 'Census Income Data')
 
@@ -67,12 +67,22 @@ table(income_kclusters)
 #expectation maximization --------------------------------------
 
 #em model
-income_em <- Mclust(income_data)
+income_em <- Mclust(income_data, G = 1:50, modelNames = 'VII')
 
 #plotting to determine number of clusters
-plot(income_em, what = 'BIC', main = TRUE, dimens = '30')
+plot(income_em, what = 'BIC', main = TRUE, col = 'blue')
 title(main = 'BIC and Clusters for Census Income Data')
-#optimal clusters using VII = 9
+#optimal clusters using VII = 50
+
+#em model
+income_em_final <- Mclust(income_data, G = 50, modelNames = 'VII')
+
+#attaching clusters to labels
+income_emclusters <- cbind(income_y, income_em_final$classification)
+
+#table
+table(income_emclusters)
+
 
 #PCA  ----------------------------------------------------------
 #pca model
@@ -81,6 +91,22 @@ income_pca <- prcomp(income_data)
 #scree plot
 fviz_eig(income_pca, addlabels = TRUE, ggtheme = theme_hc(), ncp = 30, linecolor = "red", main = "Scree plot of Census Income PCA model")
 #28 components = 80% of variance
+
+#subsetting the first 28 pcas for clustering
+income_pcas <- income_pca$x[,1:28]
+
+#using wss method to determine optimal number of clusters for kmeans
+fviz_nbclust(income_pcas, kmeans, method = 'wss', nstart = 20, k.max = 30) +
+  labs(subtitle = 'Census Income Data - PCA')
+
+
+#em pca model
+income_pca_em <- Mclust(income_pcas, G = 1:50, modelNames = 'VII')
+
+#plotting to determine number of clusters
+plot(income_pca_em, what = 'BIC', main = TRUE, col = 'blue')
+title(main = 'BIC and Clusters for Census Income Data - PCA')
+#optimal clusters using VII = 50
 
 
 #ICA  ----------------------------------------------------------

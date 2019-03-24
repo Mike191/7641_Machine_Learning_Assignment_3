@@ -60,21 +60,46 @@ table(pima_kclusters[,9:10])
 #expectation maximization --------------------------------------
 
 #em model
-pima_em <- Mclust(pima_scaled)
+pima_em <- Mclust(pima_scaled, G = 1:20, modelNames = 'VII')
 
 #plotting to determine number of clusters
-plot(pima_em, what = 'BIC', main = TRUE)
+plot(pima_em, what = 'BIC', main = TRUE, col = 'blue')
 title(main = 'BIC and Clusters for Pima Indian Data')
-#optimal clusters using VII = 9 then 8.
+#optimal clusters using VII = 9.
+
+#final model
+pima_em_final <- Mclust(pima_scaled, G = 9, modelNames = 'VII')
+
+#adding clusters to pima data to analyze
+pima_emclusters <- cbind(pima, pima_em_final$classification)
+
+#creating a table to compare to actuals
+table(pima_emclusters[,9:10])
+
 
 #PCA  ----------------------------------------------------------
 #pca model
-pima_pca <- prcomp(pima_scaled)
+pima_pca_model <- prcomp(pima_scaled)
 
 #scree plot
-fviz_eig(pima_pca, addlabels = TRUE, ggtheme = theme_hc(), linecolor = "red", main = "Scree plot of Pima Indians PCA model")
+fviz_eig(pima_pca_model, addlabels = TRUE, ggtheme = theme_hc(), linecolor = "red", main = "Scree plot of Pima Indians PCA model")
 #6 components = 90% of variance
 
+#subsetting the first 6 components for clustering
+pima_pca <- pima_pca_model$x[,1:6]
+
+#kmeans with pca
+#calculating within sum of squares for different number of clusters
+fviz_nbclust(pima_pca, kmeans, method = 'wss', k.max = 40) +
+  labs(subtitle = 'Pima Indians Data - PCA')
+
+#em pca model
+pima_pca_em <- Mclust(pima_pca, G = 1:20, modelNames = 'VII')
+
+#plotting to determine number of clusters
+plot(pima_pca_em, what = 'BIC', main = TRUE, col = 'blue')
+title(main = 'BIC and Clusters for Pima Indian Data - PCA')
+#optimal number of clusters = 6
 
 
 #ICA  ----------------------------------------------------------
