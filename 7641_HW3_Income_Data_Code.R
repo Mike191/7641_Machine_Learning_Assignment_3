@@ -131,20 +131,72 @@ title(main = 'BIC and Clusters for Census Income Data - ICA')
 #optimal clusters using VII = 
 
 
+#RCA  ----------------------------------------------------------
+
+# Functions
+maxfactor <- function(x) {
+  return(which(x == max(x)))
+}
+
+vecnorm <- function (x) {
+  p <- 2
+  if (!is.numeric(x) && !is.complex(x))
+    stop("mode of x must be either numeric or complex")
+  if (is.numeric(x))
+    x <- abs(x)
+  else x <- Mod(x)
+  return(.Fortran("d2norm", as.integer(length(x)), as.double(x),
+                  as.integer(1), double(1), PACKAGE = "mclust")[[4]])
+}
+
+rca <- function(data, p = 2) {
+  n <- ncol(data)
+  u <- rnorm(n)
+  u <- u/vecnorm(u)
+  v <- rnorm(n)
+  v <- v/vecnorm(v)
+  Q <- cbind(u, v - sum(u * v) * u)
+  dimnames(Q) <- NULL
+  Data <- as.matrix(data) %*% Q
+  Data
+}
+
+#building model
+income_rca_model <- rca(income_data)
+
+#plotting first two components
+plot(income_rca_model, main = 'Income Data First Two Random Projections')
+
+#RCA kmeans
+#calculating within sum of squares for different number of clusters
+fviz_nbclust(income_rca_model, kmeans, method = 'wss', k.max = 40) +
+  labs(subtitle = 'Income Data - Randomized Projections')
+#optimal number of clusters = 17
+
+
+#em rca model
+income_rca_em <- Mclust(income_rca_model, G = 1:40, modelNames = 'VII')
+
+#plotting to determine number of clusters
+plot(income_rca_em, what = 'BIC', main = TRUE, col = 'blue')
+title(main = 'BIC and Clusters for Income Data - Randomized Projections')
+#optimal number of clusters = 32
+
 
 
 
 #EFA  ----------------------------------------------------------
 
 #building model
-income_efa_data <- cbind(income_data, income_y)
+income_efa_data <- scale(income_data[complete.cases(income_data),])
 #making the y variable a factor
 income_efa_data$income <- as.character(income_efa_data$income)  #converting factor to characters
 income_efa_data$income <- ifelse(income_efa_data$income == "greater50K", 1, 0) 
 #income_efa_data$income <- as.factor(income_efa_data$income)
 
-
-ev <- eigen(cor(income_data))
+c <- cor(income_efa_data, na.rm = TRUE)
+c <- as.matrix(c[!is.na(c)])
+ev <- eigen(c)
 ap <- parallel(subject=nrow(income_data),
                var=ncol(income_data),
                rep=100, cent=.05)

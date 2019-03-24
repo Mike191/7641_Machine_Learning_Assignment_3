@@ -3,13 +3,12 @@
 #loading packages
 library(tidyverse)
 library(caret)
-library(ClusterR)
 library(fastICA)
 library(cluster)
 library(mclust)
 library(ggthemes)
-library(ica)
 library(neuralnet)
+library(nFactors)
 
 #loading pima indians data
 pima <- read.csv('pima-indians-diabetes.csv', header = F)
@@ -307,10 +306,62 @@ pima_ica_nn_cm$table
 
 #RP NN
 
+#attaching actual labels
+pima_rca_nn_data <- data.frame(cbind(pima_rca_model, Diagnosis = as.factor(pima[,9])))
+pima_rca_nn_data$Diagnosis <- as.factor(pima_rca_nn_data$Diagnosis)
 
+#splitting pca data into train/test
+trainIndex <- createDataPartition(pima_rca_nn_data$Diagnosis, p = .8, list = F, times = 1)
+pima_rca_nn_train <- pima_rca_nn_data[trainIndex,]
+pima_rca_nn_test <- pima_rca_nn_data[-trainIndex,]
+
+
+#building model
+ctrl <- trainControl(method = 'repeatedcv', repeats = 5)
+pima_rca_nn_model <- train(Diagnosis ~ ., data = pima_rca_nn_train, method = 'nnet', trControl = ctrl)
+
+
+#plotting model complexity curve
+plot(pima_rca_nn_model, main = 'Randomized Projections NN')
+
+#making predictions on test data
+pima_rca_nn_pred <- predict(pima_rca_nn_model, newdata = pima_rca_nn_test, type = 'raw')
+
+
+#creating a confusion matrix
+pima_rca_nn_cm <- confusionMatrix(pima_rca_nn_pred, pima_rca_nn_test$Diagnosis, mode = 'prec_recall')
+pima_rca_nn_cm$table
 
 
 #EFA NN
+
+#attaching actual labels
+pima_efa_nn_data <- data.frame(cbind(pima_efa_result$scores, Diagnosis = as.factor(pima[,9])))
+pima_efa_nn_data$Diagnosis <- as.factor(pima_efa_nn_data$Diagnosis)
+
+#splitting pca data into train/test
+trainIndex <- createDataPartition(pima_efa_nn_data$Diagnosis, p = .8, list = F, times = 1)
+pima_efa_nn_train <- pima_efa_nn_data[trainIndex,]
+pima_efa_nn_test <- pima_efa_nn_data[-trainIndex,]
+
+
+#building model
+ctrl <- trainControl(method = 'repeatedcv', repeats = 5)
+pima_efa_nn_model <- train(Diagnosis ~ ., data = pima_efa_nn_train, method = 'nnet', trControl = ctrl)
+
+
+#plotting model complexity curve
+plot(pima_efa_nn_model, main = 'Exploratory Factor Analysis NN')
+
+#making predictions on test data
+pima_efa_nn_pred <- predict(pima_efa_nn_model, newdata = pima_efa_nn_test, type = 'raw')
+
+
+#creating a confusion matrix
+pima_efa_nn_cm <- confusionMatrix(pima_efa_nn_pred, pima_efa_nn_test$Diagnosis, mode = 'prec_recall')
+pima_efa_nn_cm$table
+
+
 
 
 
