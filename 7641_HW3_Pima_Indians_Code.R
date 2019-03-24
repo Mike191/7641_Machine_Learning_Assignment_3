@@ -8,6 +8,7 @@ library(fastICA)
 library(cluster)
 library(mclust)
 library(ggthemes)
+library(ica)
 
 #loading pima indians data
 pima <- read.csv('pima-indians-diabetes.csv', header = F)
@@ -43,14 +44,14 @@ pima_scaled <- scale(pima)
 set.seed(191)
 
 #calculating within sum of squares for different number of clusters
-fviz_nbclust(pima_scaled, kmeans, nstart = 20, method = 'silhouette') +
+fviz_nbclust(pima_scaled, kmeans, method = 'wss') +
 labs(subtitle = 'Pima Indians Data')
 
-#final kmeans clustering with 20 clusters
-pima_kmeans <- kmeans(pima_clust, 20, algorithm = 'Lloyd', nstart = 50)
+#final kmeans clustering with 9 clusters
+pima_kmeans <- kmeans(pima_scaled, 9, algorithm = 'Lloyd', nstart = 20)
 
 #attaching clusters to data
-pima_kclusters <- cbind(pima, pima_clusters$cluster)
+pima_kclusters <- cbind(pima, pima_kmeans$cluster)
 
 #creating a table to compare to actual labels
 table(pima_kclusters[,9:10])
@@ -76,11 +77,13 @@ fviz_eig(pima_pca, addlabels = TRUE, ggtheme = theme_hc(), linecolor = "red", ma
 
 
 
+#ICA  ----------------------------------------------------------
 
+#building model
+pima_ica <- fastICA(pima_scaled, 4)
 
-
-
-
+#plotting
+pairs(pima_ica$S, col=rainbow(2)[pima[,1]], main = 'Pima ICA Variables')
 
 
 

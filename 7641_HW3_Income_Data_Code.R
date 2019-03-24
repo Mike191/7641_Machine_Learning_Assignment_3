@@ -50,12 +50,18 @@ rm(income_y)  #no longer needed
 set.seed(191)
 
 #using silhouette method to determine optimal number of clusters
-fviz_nbclust(income_data, kmeans, method = 'silhouette', nstart = 20) +
+fviz_nbclust(income_data, kmeans, method = 'wss', nstart = 20) +
   labs(subtitle = 'Census Income Data')
 
 
-#final kmeans clustering with 8 clusters
-income_kmeans <- kmeans(income_data, 8, algorithm = 'Lloyd', nstart = 20)
+#final kmeans clustering with 9 clusters
+income_kmeans <- kmeans(income_data, 9, algorithm = 'Lloyd', nstart = 20)
+
+#attaching clusters to data
+income_kclusters <- cbind(income_y, income_kmeans$cluster)
+
+#creating a table to compare to actual labels
+table(income_kclusters)
 
 
 #expectation maximization --------------------------------------
@@ -75,3 +81,12 @@ income_pca <- prcomp(income_data)
 #scree plot
 fviz_eig(income_pca, addlabels = TRUE, ggtheme = theme_hc(), ncp = 30, linecolor = "red", main = "Scree plot of Census Income PCA model")
 #28 components = 80% of variance
+
+
+#ICA  ----------------------------------------------------------
+
+#building model
+income_ica <- fastICA(income_data, 8)
+
+#plotting
+pairs(income_ica$S, col=rainbow(2)[income_y[,1]], main = 'Census Income ICA Variables')
