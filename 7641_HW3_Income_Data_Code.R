@@ -134,6 +134,46 @@ title(main = 'BIC and Clusters for Census Income Data - ICA')
 
 
 
+#EFA  ----------------------------------------------------------
+
+#building model
+income_efa_data <- cbind(income_data, income_y)
+#making the y variable a factor
+income_efa_data$income <- as.character(income_efa_data$income)  #converting factor to characters
+income_efa_data$income <- ifelse(income_efa_data$income == "greater50K", 1, 0) 
+#income_efa_data$income <- as.factor(income_efa_data$income)
+
+
+ev <- eigen(cor(income_data))
+ap <- parallel(subject=nrow(income_data),
+               var=ncol(income_data),
+               rep=100, cent=.05)
+nS <- nScree(x=ev$values, aparallel=ap$eigen$qevpea)
+
+plotnScree(nS, main='EFA Income Data')
+
+income_efa_result <- factanal(income_data, 3, scores="regression")
+
+
+#EFA Kmeans
+#calculating within sum of squares for different number of clusters
+fviz_nbclust(income_efa_result$scores, kmeans, method = 'wss', k.max = 40) +
+  labs(subtitle = 'Income Data - EFA')
+#optimal number of clusters = 
+
+
+#em efa model
+income_efa_em <- Mclust(income_efa_result$scores, G = 1:40, modelNames = 'VII')
+
+#plotting to determine number of clusters
+plot(income_efa_em, what = 'BIC', main = TRUE, col = 'blue')
+title(main = 'BIC and Clusters for Income Data - EFA')
+#optimal number of clusters = 5
+
+
+
+
+
 
 
 

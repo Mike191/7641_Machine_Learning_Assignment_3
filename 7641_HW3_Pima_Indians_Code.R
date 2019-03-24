@@ -125,7 +125,7 @@ fviz_nbclust(pima_ica$S, kmeans, method = 'wss', k.max = 40) +
 #optimal number of clusters = 28
 
 #final ica kmenans model
-pima_ica_final_kmeans <-  Mclust(pima_scaled, G = 28, modelNames = 'VII')
+pima_ica_final_kmeans <-  kmeans(pima_ica$S, 28, algorithm = 'Lloyd', nstart = 20)
 
 #em ica model
 pima_ica_em <- Mclust(pima_ica$S, G = 1:40, modelNames = 'VII')
@@ -144,12 +144,95 @@ pima_ica_em_final <- Mclust(pima_ica$S, G = 6, modelNames = 'VII')
 
 #Randomized Projections  ----------------------------------------------------------
 
+# Functions
+maxfactor <- function(x) {
+  return(which(x == max(x)))
+}
+
+vecnorm <- function (x) {
+  p <- 2
+  if (!is.numeric(x) && !is.complex(x))
+    stop("mode of x must be either numeric or complex")
+  if (is.numeric(x))
+    x <- abs(x)
+  else x <- Mod(x)
+  return(.Fortran("d2norm", as.integer(length(x)), as.double(x),
+                  as.integer(1), double(1), PACKAGE = "mclust")[[4]])
+}
+
+rca <- function(data, p = 2) {
+  n <- ncol(data)
+  u <- rnorm(n)
+  u <- u/vecnorm(u)
+  v <- rnorm(n)
+  v <- v/vecnorm(v)
+  Q <- cbind(u, v - sum(u * v) * u)
+  dimnames(Q) <- NULL
+  Data <- as.matrix(data) %*% Q
+  Data
+}
+
 #building model
-pima_rp <- randProj(pima_scaled, seeds = 1:20, what = 'uncertainty')
+pima_rca_model <- rca(pima_scaled[,1:8])
+
+#plotting first two components
+plot(pima_rca_model, main = 'Pima Data First Two Random Projections')
+
+#RCA kmeans
+#calculating within sum of squares for different number of clusters
+fviz_nbclust(pima_rca_model, kmeans, method = 'wss', k.max = 40) +
+  labs(subtitle = 'Pima Indians Data - Randomized Projections')
+#optimal number of clusters = 15
+
+#final rca kmenans model
+pima_rca_final_kmeans <-  kmeans(pima_rca_model, 15, algorithm = 'Lloyd', nstart = 20)
+
+#em rca model
+pima_rca_em <- Mclust(pima_rca_model, G = 1:40, modelNames = 'VII')
+
+#plotting to determine number of clusters
+plot(pima_rca_em, what = 'BIC', main = TRUE, col = 'blue')
+title(main = 'BIC and Clusters for Pima Indian Data - Randomized Projections')
+#optimal number of clusters = 2
+
+#final em rca model
+pima_rca_em_final <- Mclust(pima_rca_model, G = 2, modelNames = 'VII')
 
 
+#EFA  ----------------------------------------------------------
 
 
+#building model
+ev <- eigen(cor(pima_scaled[,1:8]))
+ap <- parallel(subject=nrow(pima_scaled[,1:8]),
+               var=ncol(pima_scaled[,1:8]),
+               rep=100, cent=.05)
+nS <- nScree(x=ev$values, aparallel=ap$eigen$qevpea)
+
+plotnScree(nS, main='EFA Pima Data')
+
+pima_efa_result <- factanal(pima_scaled[,1:8], 3, scores="regression")
+
+
+#EFA Kmeans
+#calculating within sum of squares for different number of clusters
+fviz_nbclust(pima_efa_result$scores, kmeans, method = 'wss', k.max = 40) +
+  labs(subtitle = 'Pima Indians Data - EFA')
+#optimal number of clusters = 20
+
+#final efa kmeans model
+pima_efa_final_kmeans <-  kmeans(pima_efa_result$scores, 20, algorithm = 'Lloyd', nstart = 20)
+
+#em efa model
+pima_efa_em <- Mclust(pima_efa_result$scores, G = 1:40, modelNames = 'VII')
+
+#plotting to determine number of clusters
+plot(pima_efa_em, what = 'BIC', main = TRUE, col = 'blue')
+title(main = 'BIC and Clusters for Pima Indian Data - EFA')
+#optimal number of clusters = 5
+
+#final em efa model
+pima_efa_em_final <- Mclust(pima_efa_result$scores, G = 5, modelNames = 'VII')
 
 
 #Neural Network --------------------------------------------------
@@ -227,7 +310,7 @@ pima_ica_nn_cm$table
 
 
 
-#  NN
+#EFA NN
 
 
 
@@ -237,7 +320,11 @@ pima_ica_nn_cm$table
 clustered_nn_data <- data.frame(pca_kmeans = pima_pca_final_kmeans$cluster,
                                 pca_em = pima_em_final$classification,
                                 ica_kmeans = pima_ica_final_kmeans$cluster,
-                                ica_em = pima_ica_em_final$classification)
+                                ica_em = pima_ica_em_final$classification,
+                                rca_kmeans = pima_rca_final_kmeans$cluster,
+                                rca_em = pima_rca_em_final$classification,
+                                efa_kmeans = pima_efa_final_kmeans$cluster,
+                                efa_em = pima_efa_em_final$classification)
 
 
 
