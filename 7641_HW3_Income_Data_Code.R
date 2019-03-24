@@ -116,3 +116,33 @@ income_ica <- fastICA(income_data, 8)
 
 #plotting
 pairs(income_ica$S, col=rainbow(2)[income_y[,1]], main = 'Census Income ICA Variables')
+
+#kmeans with ica
+fviz_nbclust(income_ica$S, kmeans, method = 'wss', k.max = 40) +
+  labs(subtitle = 'Income Data - ICA')
+
+
+#em ica model
+income_ica_em <- Mclust(income_ica$S, G = 1:50, modelNames = 'VII')
+
+#plotting to determine number of clusters
+plot(income_ica_em, what = 'BIC', main = TRUE, col = 'blue')
+title(main = 'BIC and Clusters for Census Income Data - ICA')
+#optimal clusters using VII = 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

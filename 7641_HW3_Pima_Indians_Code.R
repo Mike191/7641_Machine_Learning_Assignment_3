@@ -9,6 +9,7 @@ library(cluster)
 library(mclust)
 library(ggthemes)
 library(ica)
+library(neuralnet)
 
 #loading pima indians data
 pima <- read.csv('pima-indians-diabetes.csv', header = F)
@@ -92,6 +93,10 @@ pima_pca <- pima_pca_model$x[,1:6]
 #calculating within sum of squares for different number of clusters
 fviz_nbclust(pima_pca, kmeans, method = 'wss', k.max = 40) +
   labs(subtitle = 'Pima Indians Data - PCA')
+#optimal number of clusters = 30
+
+#final pca kmenans model
+pima_pca_final_kmeans <-  kmeans(pima_scaled, 30, algorithm = 'Lloyd', nstart = 20)
 
 #em pca model
 pima_pca_em <- Mclust(pima_pca, G = 1:20, modelNames = 'VII')
@@ -101,6 +106,8 @@ plot(pima_pca_em, what = 'BIC', main = TRUE, col = 'blue')
 title(main = 'BIC and Clusters for Pima Indian Data - PCA')
 #optimal number of clusters = 6
 
+#final em pca model
+pima_pca_em_final <- Mclust(pima_pca, G = 6, modelNames = 'VII')
 
 #ICA  ----------------------------------------------------------
 
@@ -109,6 +116,128 @@ pima_ica <- fastICA(pima_scaled, 4)
 
 #plotting
 pairs(pima_ica$S, col=rainbow(2)[pima[,1]], main = 'Pima ICA Variables')
+
+
+#kmeans with ica
+#calculating within sum of squares for different number of clusters
+fviz_nbclust(pima_ica$S, kmeans, method = 'wss', k.max = 40) +
+  labs(subtitle = 'Pima Indians Data - ICA')
+#optimal number of clusters = 28
+
+#final ica kmenans model
+pima_ica_final_kmeans <-  Mclust(pima_scaled, G = 28, modelNames = 'VII')
+
+#em ica model
+pima_ica_em <- Mclust(pima_ica$S, G = 1:40, modelNames = 'VII')
+
+#plotting to determine number of clusters
+plot(pima_pca_em, what = 'BIC', main = TRUE, col = 'blue')
+title(main = 'BIC and Clusters for Pima Indian Data - ICA')
+#optimal number of clusters = 6
+
+#final em ica model
+pima_ica_em_final <- Mclust(pima_ica$S, G = 6, modelNames = 'VII')
+
+
+
+
+
+#Randomized Projections  ----------------------------------------------------------
+
+#building model
+pima_rp <- randProj(pima_scaled, seeds = 1:20, what = 'uncertainty')
+
+
+
+
+
+
+#Neural Network --------------------------------------------------
+
+#PCA NN 
+#attaching actual labels
+pima_pca_nn_data <- data.frame(cbind(pima_pca, Diagnosis = as.factor(pima[,9])))
+pima_pca_nn_data$Diagnosis <- as.factor(pima_pca_nn_data$Diagnosis)
+
+#splitting pca data into train/test
+trainIndex <- createDataPartition(pima_pca_nn_data$Diagnosis, p = .8, list = F, times = 1)
+pima_pca_nn_train <- pima_pca_nn_data[trainIndex,]
+pima_pca_nn_test <- pima_pca_nn_data[-trainIndex,]
+
+#starting processing time
+start <- proc.time()[3]
+
+#building model
+ctrl <- trainControl(method = 'repeatedcv', repeats = 5)
+pima_pca_nn_model <- train(Diagnosis ~ ., data = pima_pca_nn_train, method = 'nnet', trControl = ctrl)
+#save(pima_nn_model, file = 'pima_nn_model.rda')
+
+#ending processing time
+stop <- proc.time()[3]
+
+#storing processing time
+pima_nn_time <- stop - start
+#23 seconds
+
+#plotting model complexity curve
+plot(pima_pca_nn_model)
+
+
+#making predictions on test data
+pima_pca_nn_pred <- predict(pima_pca_nn_model, newdata = pima_pca_nn_test, type = 'raw')
+
+
+#creating a confusion matrix
+pima_pca_nn_cm <- confusionMatrix(pima_pca_nn_pred, pima_pca_nn_test$Diagnosis, mode = 'prec_recall')
+pima_pca_nn_cm$table
+
+
+#ICA NN
+
+#attaching actual labels
+pima_ica_nn_data <- data.frame(cbind(pima_ica$S, Diagnosis = as.factor(pima[,9])))
+pima_ica_nn_data$Diagnosis <- as.factor(pima_ica_nn_data$Diagnosis)
+
+#splitting pca data into train/test
+trainIndex <- createDataPartition(pima_ica_nn_data$Diagnosis, p = .8, list = F, times = 1)
+pima_ica_nn_train <- pima_ica_nn_data[trainIndex,]
+pima_ica_nn_test <- pima_ica_nn_data[-trainIndex,]
+
+
+#building model
+ctrl <- trainControl(method = 'repeatedcv', repeats = 5)
+pima_ica_nn_model <- train(Diagnosis ~ ., data = pima_ica_nn_train, method = 'nnet', trControl = ctrl)
+#save(pima_nn_model, file = 'pima_nn_model.rda')
+
+#plotting model complexity curve
+plot(pima_ica_nn_model)
+
+#making predictions on test data
+pima_ica_nn_pred <- predict(pima_ica_nn_model, newdata = pima_ica_nn_test, type = 'raw')
+
+
+#creating a confusion matrix
+pima_ica_nn_cm <- confusionMatrix(pima_ica_nn_pred, pima_ica_nn_test$Diagnosis, mode = 'prec_recall')
+pima_ica_nn_cm$table
+
+
+
+#RP NN
+
+
+
+
+#  NN
+
+
+
+
+#Clustered NN  ----------------------------------------------
+#creating dataframe of clusters
+clustered_nn_data <- data.frame(pca_kmeans = pima_pca_final_kmeans$cluster,
+                                pca_em = pima_em_final$classification,
+                                ica_kmeans = pima_ica_final_kmeans$cluster,
+                                ica_em = pima_ica_em_final$classification)
 
 
 
