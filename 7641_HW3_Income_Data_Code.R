@@ -8,6 +8,8 @@ library(fastICA)
 library(cluster)
 library(mclust)
 library(factoextra)
+library(psych)
+library(GPArotation)
 
 #loading data
 income_data <- read.csv('adult.csv', header = T)
@@ -161,6 +163,8 @@ rca <- function(data, p = 2) {
   Data
 }
 
+set.seed(20)
+
 #building model
 income_rca_model <- rca(income_data)
 
@@ -248,6 +252,8 @@ plot(income_efa_em, what = 'BIC', main = TRUE, col = 'blue')
 title(main = 'BIC and Clusters for Income Data - EFA')
 #optimal number of clusters = 7
 
+#em efa model - final
+income_efa_em_final <- Mclust(income_efa_result$weights, G = 7, modelNames = 'VII')
 
 
 

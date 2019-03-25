@@ -143,6 +143,7 @@ pima_ica_em_final <- Mclust(pima_ica$S, G = 6, modelNames = 'VII')
 
 #Randomized Projections  ----------------------------------------------------------
 
+set.seed(20)
 # Functions
 maxfactor <- function(x) {
   return(which(x == max(x)))
@@ -240,6 +241,12 @@ title(main = 'BIC and Clusters for Pima Indian Data - EFA')
 #final em efa model
 pima_efa_em_final <- Mclust(pima_efa_result$scores, G = 5, modelNames = 'VII')
 
+
+#adding clusters to pima data to analyze
+pima_efa_emclusters <- cbind(pima, pima_efa_em_final$classification)
+
+#creating a table to compare to actuals
+table(pima_efa_emclusters[,9:10])
 
 #Neural Network --------------------------------------------------
 
