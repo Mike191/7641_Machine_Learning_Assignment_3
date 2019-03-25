@@ -187,40 +187,66 @@ title(main = 'BIC and Clusters for Income Data - Randomized Projections')
 
 #EFA  ----------------------------------------------------------
 
-#building model
-income_efa_data <- scale(income_data[complete.cases(income_data),])
+income_efa_data <- read.csv('adult.csv', header = T)
+
+#replacing question marks with NA
+income_efa_data[income_efa_data == "?"] <- NA
+
+#removing education number because it's basically a duplicate of education and removing native country because it has too many levels
+income_efa_data <- income_efa_data[,-4]
+income_efa_data <- income_efa_data[,-13]
+
+#getting rid of missing data
+income_efa_data <- income_efa_data[complete.cases(income_efa_data),]
+
+#cutting down the data 
+train_index <- createDataPartition(income_efa_data$income, p = .5, list = FALSE, times = 1)
+income_efa_data <- income_efa_data[train_index,]
+
 #making the y variable a factor
 income_efa_data$income <- as.character(income_efa_data$income)  #converting factor to characters
-income_efa_data$income <- ifelse(income_efa_data$income == "greater50K", 1, 0) 
-#income_efa_data$income <- as.factor(income_efa_data$income)
+income_efa_data$income <- ifelse(income_efa_data$income == ">50K", 1, 0) 
+income_efa_y <- data.frame(income = income_efa_data$income)
 
-c <- cor(income_efa_data, na.rm = TRUE)
-c <- as.matrix(c[!is.na(c)])
-ev <- eigen(c)
-ap <- parallel(subject=nrow(income_data),
-               var=ncol(income_data),
+#creating dummy variables
+dummies <- dummyVars(income ~ ., data = income_efa_data)
+income_efa_data <- predict(dummies, newdata = income_efa_data)
+income_efa_data <- data.frame(income_efa_data)
+income_efa_data <- cbind(income_efa_data, income_efa_y)
+
+
+#scaling the data
+income_efa_data <- scale(income_efa_data)
+
+#getting rid of NaNs
+income_efa_data <- income_efa_data[,-c(2,5,20)]
+
+ev <- eigen(cor(income_efa_data))
+ap <- parallel(subject=nrow(income_efa_data),
+               var=ncol(income_efa_data),
                rep=100, cent=.05)
 nS <- nScree(x=ev$values, aparallel=ap$eigen$qevpea)
 
 plotnScree(nS, main='EFA Income Data')
 
-income_efa_result <- factanal(income_data, 3, scores="regression")
+#income_efa_result <- factanal(income_efa_data, 3, scores="regression")
 
+income_efa_result <- fa(r = cor(income_efa_data), nfactors = 7, rotate = 'varimax', SMC = F, fm = 'minres')
 
 #EFA Kmeans
 #calculating within sum of squares for different number of clusters
-fviz_nbclust(income_efa_result$scores, kmeans, method = 'wss', k.max = 40) +
+fviz_nbclust(income_efa_result$weights, kmeans, method = 'wss', k.max = 40) +
   labs(subtitle = 'Income Data - EFA')
-#optimal number of clusters = 
+#optimal number of clusters = 10
 
 
 #em efa model
-income_efa_em <- Mclust(income_efa_result$scores, G = 1:40, modelNames = 'VII')
+income_efa_em <- Mclust(income_efa_result$weights, G = 1:10, modelNames = 'VII')
 
 #plotting to determine number of clusters
 plot(income_efa_em, what = 'BIC', main = TRUE, col = 'blue')
 title(main = 'BIC and Clusters for Income Data - EFA')
-#optimal number of clusters = 5
+#optimal number of clusters = 7
 
 
 

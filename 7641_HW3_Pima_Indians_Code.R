@@ -198,6 +198,13 @@ title(main = 'BIC and Clusters for Pima Indian Data - Randomized Projections')
 pima_rca_em_final <- Mclust(pima_rca_model, G = 2, modelNames = 'VII')
 
 
+#adding clusters to pima data to analyze
+pima_rca_emclusters <- cbind(pima, pima_rca_em_final$classification)
+
+#creating a table to compare to actuals
+table(pima_rca_emclusters[,9:10])
+
+
 #EFA  ----------------------------------------------------------
 
 
@@ -242,31 +249,21 @@ pima_pca_nn_data <- data.frame(cbind(pima_pca, Diagnosis = as.factor(pima[,9])))
 pima_pca_nn_data$Diagnosis <- as.factor(pima_pca_nn_data$Diagnosis)
 
 #splitting pca data into train/test
-trainIndex <- createDataPartition(pima_pca_nn_data$Diagnosis, p = .8, list = F, times = 1)
+trainIndex <- createDataPartition(pima_pca_nn_data$Diagnosis, p = .6, list = F, times = 1)
 pima_pca_nn_train <- pima_pca_nn_data[trainIndex,]
 pima_pca_nn_test <- pima_pca_nn_data[-trainIndex,]
 
-#starting processing time
-start <- proc.time()[3]
 
 #building model
-ctrl <- trainControl(method = 'repeatedcv', repeats = 5)
+ctrl <- trainControl(method = 'repeatedcv', repeats = 10)
 pima_pca_nn_model <- train(Diagnosis ~ ., data = pima_pca_nn_train, method = 'nnet', trControl = ctrl)
-#save(pima_nn_model, file = 'pima_nn_model.rda')
-
-#ending processing time
-stop <- proc.time()[3]
-
-#storing processing time
-pima_nn_time <- stop - start
-#23 seconds
 
 #plotting model complexity curve
-plot(pima_pca_nn_model)
+plot(pima_pca_nn_model, main = 'Principle Component Analysis NN')
 
 
 #making predictions on test data
-pima_pca_nn_pred <- predict(pima_pca_nn_model, newdata = pima_pca_nn_test, type = 'raw')
+pima_pca_nn_pred <- predict(pima_pca_nn_model, newdata = pima_pca_nn_test[,1:6], type = 'raw')
 
 
 #creating a confusion matrix
@@ -289,10 +286,10 @@ pima_ica_nn_test <- pima_ica_nn_data[-trainIndex,]
 #building model
 ctrl <- trainControl(method = 'repeatedcv', repeats = 5)
 pima_ica_nn_model <- train(Diagnosis ~ ., data = pima_ica_nn_train, method = 'nnet', trControl = ctrl)
-#save(pima_nn_model, file = 'pima_nn_model.rda')
+
 
 #plotting model complexity curve
-plot(pima_ica_nn_model)
+plot(pima_ica_nn_model, main = 'Independent Component Analysis NN')
 
 #making predictions on test data
 pima_ica_nn_pred <- predict(pima_ica_nn_model, newdata = pima_ica_nn_test, type = 'raw')
@@ -375,7 +372,28 @@ clustered_nn_data <- data.frame(pca_kmeans = pima_pca_final_kmeans$cluster,
                                 rca_kmeans = pima_rca_final_kmeans$cluster,
                                 rca_em = pima_rca_em_final$classification,
                                 efa_kmeans = pima_efa_final_kmeans$cluster,
-                                efa_em = pima_efa_em_final$classification)
+                                efa_em = pima_efa_em_final$classification,
+                                Diagnosis = as.factor(pima[,9]))
 
 
+#splitting pca data into train/test
+trainIndex <- createDataPartition(clustered_nn_data$Diagnosis, p = .8, list = F, times = 1)
+clustered_nn_train <- clustered_nn_data[trainIndex,]
+clustered_nn_test <- clustered_nn_data[-trainIndex,]
 
+
+#building model
+ctrl <- trainControl(method = 'repeatedcv', repeats = 5)
+clustered_nn_model <- train(Diagnosis ~ ., data = clustered_nn_train, method = 'nnet', trControl = ctrl)
+
+
+#plotting model complexity curve
+plot(clustered_nn_model, main = 'Clustered NN')
+
+#making predictions on test data
+clustered_nn_pred <- predict(clustered_nn_model, newdata = clustered_nn_test, type = 'raw')
+
+
+#creating a confusion matrix
+clustered_nn_cm <- confusionMatrix(clustered_nn_pred, clustered_nn_test$Diagnosis, mode = 'prec_recall')
+clustered_nn_cm$table
